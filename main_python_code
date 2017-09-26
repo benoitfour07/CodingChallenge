@@ -1,0 +1,76 @@
+keyword=input("Welcome in this program! \nThe purpose of this program is to find the relevant french news articles linked to a keyword.\nWe're going to work on radio news website Europe1\nI will ask you the keywork to use as reference.\nPlease enter a keyword:\n")
+
+
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import sqlite3
+import newspaper
+URLs=[]
+
+europe1_paper = newspaper.build('http://www.europe1.fr/international',memoize_articles=False)
+for article in europe1_paper.articles:
+     #print(article.url)
+     URLs.append(article.url)
+    
+number_article=len(URLs)
+
+Titles=[]
+Subtitles=[]
+Description=[]
+i=0
+
+def analyse_article(url):
+    page = requests.get(url)
+    page
+    
+    title = soup.find('h1').get_text()
+    try:
+        subtitle= soup.find('h2').get_text()
+    except AttributeError:
+        subtitle=""
+    
+    number = len(soup.find_all('p'))
+    i=0
+    description=""
+    for i in range(number):
+        description += soup.find_all('p')[i].get_text()
+        
+    return title,subtitle,description	
+for i in range(number_article):
+    page = requests.get(URLs[i])
+    soup = BeautifulSoup(page.content, 'html.parser')
+    Titles.append(analyse_article(URLs[i])[0])
+    Subtitles.append(analyse_article(URLs[i])[1])
+    Description.append(analyse_article(URLs[i])[2])
+
+conn = sqlite3.connect('Chance_Database.db')
+QueryCurs = conn.cursor()
+cursor = conn.cursor()
+#* cursor.execute(""" DROP TABLE Europe1_Article""")conn.commit()
+
+def CreateTable():
+    QueryCurs.execute('''CREATE TABLE Europe1_Article
+    (id INTEGER PRIMARY KEY, title TEXT,url TEXT,subtitle TEXT, description TEXT)''')
+
+
+cursor.execute("""DROP TABLE Europe1_Article""")
+
+
+CreateTable()
+
+def AddEntry(title,url,subtitle,description):
+    QueryCurs.execute('''INSERT INTO Europe1_Article (title,url,subtitle,description)
+    VALUES (?,?,?,?)''',(title,url,subtitle,description))
+
+
+j=0
+for j in range(number_article):
+    AddEntry(Titles[j],URLs[j],Subtitles[j],Description[j])
+
+conn.commit()
+
+QueryCurs.execute('SELECT url FROM Europe1_Article WHERE title like "%'+keyword+'%" ')
+for i in QueryCurs:  
+    for j in i:
+        print(j)
